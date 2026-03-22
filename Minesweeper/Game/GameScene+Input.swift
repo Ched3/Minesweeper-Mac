@@ -138,7 +138,6 @@ extension GameScene {
                 }
 
                 let coords = convertLocation(name: name)
-                let tile = board.tileAt(r: coords[0], c: coords[1])!
 
                 if board.revealAt(r: coords[0], c: coords[1], isChord: true) {
                     finishGame(won: false)
