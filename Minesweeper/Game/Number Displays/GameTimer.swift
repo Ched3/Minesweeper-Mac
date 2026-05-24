@@ -72,6 +72,7 @@ class GameTimer: NumberDisplay {
     }
 }
 
+@MainActor
 protocol GameTimerDelegate: AnyObject {
     func updateTime(_ time: TimeInterval)
 }

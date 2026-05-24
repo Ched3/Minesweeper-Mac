@@ -12,7 +12,7 @@ let bindings: [Binding] = [
     //    Binding(name: "Chord", tooltipText: "", defaultCharCode: <#T##UInt32?#>, charCode: <#T##UInt32?#>)
 ]
 
-struct Binding {
+struct Binding: Sendable {
 
     let name: String
     let tooltipText: String

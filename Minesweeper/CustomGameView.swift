@@ -9,7 +9,7 @@ import SwiftUI
 
 struct CustomGameView: View {
 
-    var onDismiss: (() -> Void)?
+    var onDismiss: (@Sendable @MainActor () -> Void)?
 
     @State private var rows: String = ""
     @State private var columns: String = ""

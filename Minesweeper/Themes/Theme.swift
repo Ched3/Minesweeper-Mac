@@ -8,7 +8,7 @@
 import Foundation
 import SpriteKit
 
-@objc class Theme: NSObject {
+@MainActor @objc class Theme: NSObject {
 
     let name: String
     let fileName: String

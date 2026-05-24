@@ -12,26 +12,18 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 @main
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     @IBOutlet weak var checkForUpdatesItem: NSMenuItem!
-    let updaterController: SPUStandardUpdaterController
+    private var updaterController: SPUStandardUpdaterController!
+    private var hostingController: NSHostingController<CustomGameView>?
 
-    private lazy var hostingController: NSHostingController<CustomGameView> = {
-        let customGameView = CustomGameView(onDismiss: { [weak self] in
-            guard let self else { return }
-            self.hostingController.presentingViewController?.dismiss(self.hostingController)
-        })
-        return NSHostingController(rootView: customGameView)
-    }()
-
-    override init() {
+    // Runs before the main storyboard is loaded, so themes are available for viewDidLoad()
+    func applicationWillFinishLaunching(_ aNotification: Notification) {
         updaterController = SPUStandardUpdaterController(
             startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
 
-        super.init()
-
-        // This block of code must happen before the ViewController's viewDidLoad()
         let fileManager = FileManager.default
         let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first!
@@ -63,6 +55,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 print("could not create directory")
             }
         }
+
+        hostingController = NSHostingController(rootView: CustomGameView(onDismiss: { [weak self] in
+            guard let self else { return }
+            self.hostingController?.presentingViewController?.dismiss(self.hostingController!)
+        }))
     }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
@@ -105,9 +102,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @IBAction func customGame(_ sender: NSMenuItem) {
-        if let window = NSApplication.shared.mainWindow {
+        if let window = NSApplication.shared.mainWindow, let hc = hostingController {
             if window.identifier?.rawValue == "Main" {
-                window.contentViewController?.presentAsSheet(hostingController)
+                window.contentViewController?.presentAsSheet(hc)
             }
         }
     }

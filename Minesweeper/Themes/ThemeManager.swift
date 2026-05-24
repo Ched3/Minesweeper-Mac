@@ -10,6 +10,7 @@ import Foundation
 import NaturalLanguage
 import SpriteKit
 
+@MainActor
 class ThemeManager {
 
     static let shared = ThemeManager()

@@ -8,6 +8,7 @@
 import Foundation
 import SpriteKit
 
+@MainActor
 class Tile {
 
     enum State {
@@ -34,8 +35,8 @@ class Tile {
 
     let node: SKSpriteNode
 
-    var r: Int
-    var c: Int
+    let r: Int
+    let c: Int
     var state: State
     var value: Value
 
@@ -126,13 +127,13 @@ class Tile {
 }
 
 extension Tile: Equatable {
-    static func == (lhs: Tile, rhs: Tile) -> Bool {
+    nonisolated static func == (lhs: Tile, rhs: Tile) -> Bool {
         return lhs.r == rhs.r && lhs.c == rhs.c
     }
 }
 
 extension Tile: CustomStringConvertible {
-    var description: String {
+    nonisolated var description: String {
         return "[\(r), \(c)]"
     }
 }

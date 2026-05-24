@@ -122,9 +122,7 @@ extension StatsViewController: GameTimerDelegate {
         let seconds = Int(elapsedTime)
         let hundredths = Int((elapsedTime.truncatingRemainder(dividingBy: 1)) * 100)
 
-        DispatchQueue.main.async {
-            self.timerField.stringValue = String(format: "%d.%02d", seconds, hundredths)
-        }
+        timerField.stringValue = String(format: "%d.%02d", seconds, hundredths)
 
         //        TODO: Add back in
         //        if (elapsedTime.magnitude == 0) {

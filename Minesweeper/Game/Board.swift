@@ -10,6 +10,7 @@ import Foundation
 import SpriteKit
 
 /// Representation of a Minesweeper board
+@MainActor
 class Board {
 
     /// The anchor node for the board
