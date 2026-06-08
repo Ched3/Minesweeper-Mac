@@ -25,8 +25,11 @@ extension GameScene {
                 let coords = convertLocation(name: name)
                 let tile = board.tileAt(r: coords[0], c: coords[1])!
 
-                if tile.state != .Uncovered {
+                if tile.state == .Covered || tile.state == .Question {
                     tile.pressed()
+                } else if tile.state == .Uncovered && tile.isNumber() {
+                    isChord = true
+                    board.adjacentPressAt(r: tile.r, c: tile.c)
                 }
                 if isMiddleClick() || event.modifierFlags.contains(.command) {
                     // TODO: Decrement right clicks by 1
@@ -59,17 +62,19 @@ extension GameScene {
                 newGame()
             } else {
                 if gameState == .Won || gameState == .Lost { return }
-                if gameState == .Unstarted {
-                    gameTimer.start()
-                    gameState = .InProgress
-                }
 
                 mainButton.set(state: .Happy)
                 let coords = convertLocation(name: name)
                 let tile = board.tileAt(r: coords[0], c: coords[1])!
 
-                if tile.state == .Flagged {
-                    mineCounter.increment()
+                if tile.state == .Flagged && !isChord {
+                    isChord = false
+                    return
+                }
+
+                if gameState == .Unstarted {
+                    gameTimer.start()
+                    gameState = .InProgress
                 }
 
                 if board.revealAt(r: coords[0], c: coords[1], isChord: isChord) {
@@ -83,7 +88,12 @@ extension GameScene {
     }
 
     override func keyDown(with event: NSEvent) {
-
+        if event.charactersIgnoringModifiers?.lowercased() == "r" {
+            mainButton.set(state: .Happy)
+            newGame()
+        } else {
+            super.keyDown(with: event)
+        }
     }
 
     override func rightMouseDown(with event: NSEvent) {
@@ -166,7 +176,7 @@ extension GameScene {
                 let coords = convertLocation(name: name)
                 let tile = board.tileAt(r: coords[0], c: coords[1])
 
-                if tile?.state != .Uncovered {
+                if tile?.state == .Covered || tile?.state == .Question {
                     tile?.pressed()
                 }
                 if isChord {

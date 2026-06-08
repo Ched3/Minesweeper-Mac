@@ -73,6 +73,8 @@ class ViewController: NSViewController {
         } else {
             view.window?.level = .normal
         }
+
+        view.window?.makeFirstResponder(skView)
     }
 
     @objc func setSubtitle(_: Notification) {
