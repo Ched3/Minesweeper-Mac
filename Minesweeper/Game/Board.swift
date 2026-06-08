@@ -5,6 +5,7 @@
 //  Created by Cameron Goddard on 4/3/22.
 //
 
+import AppKit
 import Defaults
 import Foundation
 import SpriteKit
@@ -39,6 +40,16 @@ class Board {
 
     var hintScale: CGFloat { scale }
 
+    private let gameMode: GameMode
+
+    /// Whether mines have been generated (no-guessing mode defers placement until first click)
+    private var minesGenerated = false
+
+    /// Whether the board layout can be saved to a file
+    var canSave: Bool {
+        gameMode != .noGuessing || minesGenerated
+    }
+
     private var tileSize: CGSize {
         CGSize(
             width: 16 * scale,
@@ -48,7 +59,7 @@ class Board {
 
     init(
         scale: CGFloat, rows: Int, cols: Int, mines: Int, minesLayout: [(Int, Int)]?,
-        isThemePreview: Bool = false
+        isThemePreview: Bool = false, gameMode: GameMode = .standard
     ) {
         self.node = SKNode()
         self.scale = scale
@@ -58,6 +69,7 @@ class Board {
         self.mines = mines
 
         self.isThemePreview = isThemePreview
+        self.gameMode = gameMode
 
         // Mark this as a loaded board if given a predefined mine layout
         if let minesLayout {
@@ -103,6 +115,12 @@ class Board {
             for (r, c) in minesLayout {
                 tiles[r][c].setValue(val: .Mine)
             }
+            if gameMode == .noGuessing {
+                minesGenerated = true
+            }
+        } else if gameMode == .noGuessing {
+            minesLayout = []
+            minesGenerated = false
         } else {
             minesLayout = []
 
@@ -116,12 +134,14 @@ class Board {
         }
 
         // Set adjacency numbers
-        setNumbers()
+        if loadedBoard || restart || gameMode == .standard {
+            setNumbers()
+        }
 
         if isThemePreview {
             // Set up the board to act as a preview for themes
             initThemePreview()
-        } else {
+        } else if gameMode == .standard || loadedBoard || restart {
             // Calculate total 3BV and send to Stats
             NotificationCenter.default.post(
                 name: .updateStat, object: nil, userInfo: ["Total3BV": calculate3BV()])
@@ -305,6 +325,12 @@ class Board {
         }
 
         if tile.state != .Uncovered {
+            if gameMode == .noGuessing && !minesGenerated {
+                guard generateMinesOnFirstClick(r: r, c: c) else {
+                    return false
+                }
+            }
+
             NotificationCenter.default.post(name: .updateStat, object: nil, userInfo: ["Effective": 0])
 
             if tileAt(r: r, c: c)?.value == .Empty
@@ -317,8 +343,8 @@ class Board {
             if tile.value == .Empty {
                 reveal(r: r, c: c)
             } else {
-                if revealedTiles == 0 && Defaults[.General.safeFirstClick] && tile.value == .Mine
-                    && !loadedBoard
+                if revealedTiles == 0 && gameMode == .standard && Defaults[.General.safeFirstClick]
+                    && tile.value == .Mine && !loadedBoard
                 {
                     let neighborhood = getAdjacentTiles(r: tile.r, c: tile.c) + [tile]
                     let tilesOutsideNeighborhood = rows * cols - neighborhood.count
@@ -418,7 +444,43 @@ class Board {
     func reset(restart: Bool = false) {
         revealedTiles = 0
         loadedBoard = false
+        if gameMode == .noGuessing && !restart {
+            minesGenerated = false
+            minesLayout = []
+        }
         initBoard(restart: restart)
+    }
+
+    /// Generates a solvable mine layout on the first click in no-guessing mode
+    private func generateMinesOnFirstClick(r: Int, c: Int) -> Bool {
+        guard
+            let layout = NoGuessGenerator.generate(
+                rows: rows,
+                cols: cols,
+                mines: mines,
+                firstClick: (r, c),
+                minOpening: NoGuessGenerator.minOpening(rows: rows, cols: cols)
+            )
+        else {
+            let alert = NSAlert()
+            alert.messageText = "Could Not Generate Board"
+            alert.informativeText =
+                "Unable to create a solvable board for this click. Try clicking a different tile."
+            alert.alertStyle = .warning
+            alert.runModal()
+            return false
+        }
+
+        minesLayout = layout
+        for (mineR, mineC) in layout {
+            tiles[mineR][mineC].setValue(val: .Mine)
+        }
+        setNumbers()
+        minesGenerated = true
+
+        NotificationCenter.default.post(
+            name: .updateStat, object: nil, userInfo: ["Total3BV": calculate3BV()])
+        return true
     }
 
     /// Flags all mines that are not already flagged. Called when a player wins a games

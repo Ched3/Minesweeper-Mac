@@ -46,6 +46,8 @@
 		3BC0A0022F00000200000002 /* HintSolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0122F00001200000002 /* HintSolver.swift */; };
 		3BC0A0032F00000300000003 /* HintOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0132F00001300000003 /* HintOverlay.swift */; };
 		3BC0A0042F00000400000004 /* GameButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0142F00001400000004 /* GameButton.swift */; };
+		3BC0A0052F00000500000005 /* NoGuessGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0152F00001500000005 /* NoGuessGenerator.swift */; };
+		3BC0A0062F00000600000006 /* GameMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0162F00001600000006 /* GameMode.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -88,6 +90,8 @@
 		3BC0A0122F00001200000002 /* HintSolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintSolver.swift; sourceTree = "<group>"; };
 		3BC0A0132F00001300000003 /* HintOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintOverlay.swift; sourceTree = "<group>"; };
 		3BC0A0142F00001400000004 /* GameButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameButton.swift; sourceTree = "<group>"; };
+		3BC0A0152F00001500000005 /* NoGuessGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoGuessGenerator.swift; sourceTree = "<group>"; };
+		3BC0A0162F00001600000006 /* GameMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameMode.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -165,6 +169,8 @@
 				3BC0A0112F00001100000001 /* BoardSnapshot.swift */,
 				3BC0A0122F00001200000002 /* HintSolver.swift */,
 				3BC0A0132F00001300000003 /* HintOverlay.swift */,
+				3BC0A0152F00001500000005 /* NoGuessGenerator.swift */,
+				3BC0A0162F00001600000006 /* GameMode.swift */,
 				3B9DF114289DBBE1007CADA6 /* Number Displays */,
 			);
 			path = Game;
@@ -312,6 +318,8 @@
 				3BC0A0022F00000200000002 /* HintSolver.swift in Sources */,
 				3BC0A0032F00000300000003 /* HintOverlay.swift in Sources */,
 				3BC0A0042F00000400000004 /* GameButton.swift in Sources */,
+				3BC0A0052F00000500000005 /* NoGuessGenerator.swift in Sources */,
+				3BC0A0062F00000600000006 /* GameMode.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */

@@ -93,6 +93,28 @@
                                                 <action selector="newGame:" target="Voe-Tx-rLC" id="gtG-C1-8rP"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="No Guessing" id="NGM-SM-001">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <menu key="submenu" title="No Guessing" id="NGM-SM-002">
+                                                <items>
+                                                    <menuItem title="No Guess Beginner" keyEquivalent="4" id="NGM-MI-BEG">
+                                                        <connections>
+                                                            <action selector="newGame:" target="Voe-Tx-rLC" id="NGM-AC-BEG"/>
+                                                        </connections>
+                                                    </menuItem>
+                                                    <menuItem title="No Guess Intermediate" keyEquivalent="5" id="NGM-MI-INT">
+                                                        <connections>
+                                                            <action selector="newGame:" target="Voe-Tx-rLC" id="NGM-AC-INT"/>
+                                                        </connections>
+                                                    </menuItem>
+                                                    <menuItem title="No Guess Hard" keyEquivalent="6" id="NGM-MI-HRD">
+                                                        <connections>
+                                                            <action selector="newGame:" target="Voe-Tx-rLC" id="NGM-AC-HRD"/>
+                                                        </connections>
+                                                    </menuItem>
+                                                </items>
+                                            </menu>
+                                        </menuItem>
                                         <menuItem title="Custom..." id="U5c-xf-mhO" userLabel="Custom...">
                                             <modifierMask key="keyEquivalentModifierMask"/>
                                             <connections>

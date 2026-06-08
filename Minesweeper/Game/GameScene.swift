@@ -32,6 +32,7 @@ class GameScene: SKScene {
     var scale: CGFloat
 
     let isThemePreview: Bool
+    let gameMode: GameMode
 
     var currentTile: String? = nil
     var isChord = false
@@ -41,18 +42,19 @@ class GameScene: SKScene {
 
     init(
         size: CGSize, scale: CGFloat, rows: Int, cols: Int, mines: Int, minesLayout: [(Int, Int)]?,
-        isThemePreview: Bool = false
+        isThemePreview: Bool = false, gameMode: GameMode = .standard
     ) {
         self.rows = rows
         self.cols = cols
         self.mines = mines
         self.scale = scale
         self.isThemePreview = isThemePreview
+        self.gameMode = gameMode
 
         borders = Borders(sceneSize: size, scale: scale)
         board = Board(
             scale: scale, rows: rows, cols: cols, mines: mines, minesLayout: minesLayout,
-            isThemePreview: isThemePreview)
+            isThemePreview: isThemePreview, gameMode: gameMode)
         mainButton = MainButton(sceneSize: size, scale: scale)
         gameTimer = GameTimer(sceneSize: size, scale: scale)
         mineCounter = MineCounter(sceneSize: size, scale: scale, mines: mines)
@@ -61,7 +63,7 @@ class GameScene: SKScene {
 
         hintOverlay = HintOverlay(board: board)
         hintButton = GameButton(
-            title: "Hint", name: "Hint Button", sceneSize: size, scale: scale)
+            title: "", name: "Hint Button", sceneSize: size, scale: scale)
         continueButton = GameButton(
             title: "Continue", name: "Continue Button", sceneSize: size, scale: scale)
         continueButton.isHiddenButton = true

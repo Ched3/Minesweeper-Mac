@@ -31,6 +31,7 @@ class GameButton: SKSpriteNode {
         label.verticalAlignmentMode = .center
         label.horizontalAlignmentMode = .center
         label.zPosition = 1
+        label.isHidden = title.isEmpty
 
         super.init(texture: theme.tiles.covered, color: .clear, size: buttonSize)
 
@@ -38,8 +39,10 @@ class GameButton: SKSpriteNode {
         self.anchorPoint = CGPoint(x: 0, y: 1)
         self.zPosition = 5
         self.setScale(scale)
-        addChild(label)
-        centerLabel()
+        if !title.isEmpty {
+            addChild(label)
+            centerLabel()
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -59,8 +62,10 @@ class GameButton: SKSpriteNode {
         self.sceneSize = sceneSize
         self.buttonScale = scale
         self.setScale(scale)
-        label.fontSize = (label.text?.count ?? 0) > 4 ? 5 * scale / 1.5 : 7 * scale / 1.5
-        centerLabel()
+        if !label.isHidden {
+            label.fontSize = (label.text?.count ?? 0) > 4 ? 5 * scale / 1.5 : 7 * scale / 1.5
+            centerLabel()
+        }
     }
 
     func layoutNextTo(mainButton: MainButton, xOffset: CGFloat) {

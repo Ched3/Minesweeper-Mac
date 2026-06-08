@@ -27,6 +27,16 @@ class ViewController: NSViewController {
         "Custom": [8, 8, 10],
     ]
 
+    var noGuessDifficulties = [
+        "No Guess Beginner": [8, 8, 10],
+        "No Guess Intermediate": [16, 16, 40],
+        "No Guess Hard": [16, 30, 99],
+    ]
+
+    var gameMode: GameMode {
+        difficulty.hasPrefix("No Guess ") ? .noGuessing : .standard
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -42,6 +52,10 @@ class ViewController: NSViewController {
                 rows = Defaults[.Game.customDifficulty][0]
                 cols = Defaults[.Game.customDifficulty][1]
                 mines = Defaults[.Game.customDifficulty][2]
+            } else if let noGuessDimensions = noGuessDifficulties[difficulty] {
+                rows = noGuessDimensions[0]
+                cols = noGuessDimensions[1]
+                mines = noGuessDimensions[2]
             } else {
                 rows = difficulties[difficulty]![0]
                 cols = difficulties[difficulty]![1]
@@ -54,7 +68,7 @@ class ViewController: NSViewController {
 
             let scene = GameScene(
                 size: self.skView.frame.size, scale: scale, rows: rows, cols: cols, mines: mines,
-                minesLayout: minesLayout)
+                minesLayout: minesLayout, gameMode: gameMode)
             view.presentScene(scene)
 
             // view.showsFPS = true

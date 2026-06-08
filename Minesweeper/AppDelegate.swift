@@ -141,7 +141,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @IBAction func saveBoard(_ sender: NSMenuItem) {
         guard let window = NSApplication.shared.mainWindow,
             let vc = window.contentViewController as? ViewController,
-            let board = vc.getBoard()
+            let board = vc.getBoard(),
+            board.canSave
         else { return }
 
         let savePanel = NSSavePanel()
