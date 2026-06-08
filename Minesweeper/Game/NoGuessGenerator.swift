@@ -5,6 +5,14 @@
 
 import Foundation
 
+/// Generates mine layouts that are guaranteed solvable without guessing.
+///
+/// Boards are produced by repeatedly placing mines at random and running a
+/// deterministic logic solver until one is fully solvable. The solver works on
+/// flat integer arrays (cells indexed as `r * cols + c`) with precomputed
+/// neighbor lists, and applies both single-cell count deduction and
+/// subset / constraint-subtraction deduction so that the vast majority of
+/// human-solvable boards are accepted — keeping the number of attempts low.
 enum NoGuessGenerator {
 
     static func minOpening(rows: Int, cols: Int) -> Int {
@@ -15,9 +23,12 @@ enum NoGuessGenerator {
     }
 
     static func maxAttempts(rows: Int, cols: Int) -> Int {
-        if rows == 16 && cols == 30 { return 20000 }
-        if rows == 16 && cols == 16 { return 10000 }
-        return 5000
+        if rows == 16 && cols == 30 { return 3000 }
+        if rows == 16 && cols == 16 { return 2000 }
+        // Custom boards: scale with area so large/dense layouts get enough tries
+        // (each attempt costs well under a millisecond), bounded to keep the
+        // worst case — a board with no no-guess solution — responsive.
+        return min(6000, max(2000, rows * cols * 5))
     }
 
     static func generate(
@@ -30,196 +41,265 @@ enum NoGuessGenerator {
     ) -> [(Int, Int)]? {
         let opening = minOpening ?? self.minOpening(rows: rows, cols: cols)
         let attempts = maxAttempts ?? self.maxAttempts(rows: rows, cols: cols)
-        let safeZone = Set(safeZoneCoords(around: firstClick, rows: rows, cols: cols))
+        let n = rows * cols
+        let start = firstClick.0 * cols + firstClick.1
 
-        var candidates = [(Int, Int)]()
-        for r in 0..<rows {
-            for c in 0..<cols {
-                if !safeZone.contains(Coord(r: r, c: c)) {
-                    candidates.append((r, c))
-                }
-            }
+        // Precompute neighbor indices once — these never change across attempts.
+        let neighbors = buildNeighbors(rows: rows, cols: cols)
+
+        // Cells eligible to hold a mine: everything outside the 3x3 first-click zone.
+        var inSafeZone = [Bool](repeating: false, count: n)
+        for nb in neighbors[start] { inSafeZone[nb] = true }
+        inSafeZone[start] = true
+
+        var candidates = [Int]()
+        candidates.reserveCapacity(n)
+        for i in 0..<n where !inSafeZone[i] {
+            candidates.append(i)
         }
-
         guard candidates.count >= mines else { return nil }
 
-        let firstClickCoord = Coord(r: firstClick.0, c: firstClick.1)
+        let safeTargetCount = n - mines
+
+        // Scratch buffers reused across attempts to avoid per-attempt allocation.
+        var mine = [Bool](repeating: false, count: n)
+        var number = [Int](repeating: 0, count: n)
 
         for _ in 0..<attempts {
             candidates.shuffle()
-            let mineCoords = Set(candidates.prefix(mines).map { Coord(r: $0.0, c: $0.1) })
-            let numbers = computeNumbers(mines: mineCoords, rows: rows, cols: cols)
 
-            let openingSize = simulateOpeningSize(
-                from: firstClickCoord, numbers: numbers, rows: rows, cols: cols)
-            if openingSize < opening { continue }
+            for i in 0..<n { mine[i] = false }
+            for k in 0..<mines { mine[candidates[k]] = true }
 
-            if isSolvableWithoutGuessing(
-                mines: mineCoords,
-                numbers: numbers,
-                rows: rows,
-                cols: cols,
-                firstClick: firstClickCoord,
-                totalMines: mines
+            computeNumbers(mine: mine, neighbors: neighbors, n: n, number: &number)
+
+            if solveAttempt(
+                number: number,
+                neighbors: neighbors,
+                n: n,
+                start: start,
+                minOpening: opening,
+                safeTargetCount: safeTargetCount
             ) {
-                return mineCoords.map { ($0.r, $0.c) }
+                return (0..<n).filter { mine[$0] }.map { ($0 / cols, $0 % cols) }
             }
         }
 
         return nil
     }
 
-    private static func safeZoneCoords(around: (Int, Int), rows: Int, cols: Int) -> [Coord] {
-        var result = [Coord]()
-        for dr in -1...1 {
-            for dc in -1...1 {
-                let r = around.0 + dr
-                let c = around.1 + dc
-                if r >= 0 && r < rows && c >= 0 && c < cols {
-                    result.append(Coord(r: r, c: c))
-                }
-            }
-        }
-        return result
-    }
+    // MARK: - Setup
 
-    private static func computeNumbers(mines: Set<Coord>, rows: Int, cols: Int) -> [[Int]] {
-        var numbers = Array(repeating: Array(repeating: 0, count: cols), count: rows)
+    private static func buildNeighbors(rows: Int, cols: Int) -> [[Int]] {
+        var neighbors = [[Int]](repeating: [], count: rows * cols)
         for r in 0..<rows {
             for c in 0..<cols {
-                if mines.contains(Coord(r: r, c: c)) { continue }
-                numbers[r][c] = adjacent(r: r, c: c, rows: rows, cols: cols)
-                    .filter { mines.contains($0) }.count
-            }
-        }
-        return numbers
-    }
-
-    private static func simulateOpeningSize(
-        from: Coord, numbers: [[Int]], rows: Int, cols: Int
-    ) -> Int {
-        var revealed = Set<Coord>()
-        floodFillReveal(from: from, numbers: numbers, revealed: &revealed, rows: rows, cols: cols)
-        return revealed.count
-    }
-
-    private static func floodFillReveal(
-        from: Coord, numbers: [[Int]], revealed: inout Set<Coord>, rows: Int, cols: Int
-    ) {
-        if revealed.contains(from) { return }
-        revealed.insert(from)
-
-        for neighbor in adjacent(r: from.r, c: from.c, rows: rows, cols: cols) {
-            if revealed.contains(neighbor) { continue }
-            let value = numbers[neighbor.r][neighbor.c]
-            if value == 0 {
-                floodFillReveal(
-                    from: neighbor, numbers: numbers, revealed: &revealed, rows: rows, cols: cols)
-            } else if value > 0 {
-                revealed.insert(neighbor)
-            }
-        }
-    }
-
-    private static func isSolvableWithoutGuessing(
-        mines: Set<Coord>,
-        numbers: [[Int]],
-        rows: Int,
-        cols: Int,
-        firstClick: Coord,
-        totalMines: Int
-    ) -> Bool {
-        var revealed = Set<Coord>()
-        var flagged = Set<Coord>()
-
-        floodFillReveal(
-            from: firstClick, numbers: numbers, revealed: &revealed, rows: rows, cols: cols)
-
-        while true {
-            let (safe, mineDeductions) = deterministicDeduction(
-                revealed: revealed,
-                flagged: flagged,
-                numbers: numbers,
-                rows: rows,
-                cols: cols
-            )
-
-            if safe.isEmpty && mineDeductions.isEmpty {
-                let safeCellCount = rows * cols - totalMines
-                return revealed.count == safeCellCount
-            }
-
-            for coord in mineDeductions {
-                if !mines.contains(coord) { return false }
-                flagged.insert(coord)
-            }
-
-            for coord in safe {
-                if mines.contains(coord) { return false }
-                revealed.insert(coord)
-                if numbers[coord.r][coord.c] == 0 {
-                    floodFillReveal(
-                        from: coord, numbers: numbers, revealed: &revealed, rows: rows, cols: cols)
-                }
-            }
-        }
-    }
-
-    private static func deterministicDeduction(
-        revealed: Set<Coord>,
-        flagged: Set<Coord>,
-        numbers: [[Int]],
-        rows: Int,
-        cols: Int
-    ) -> (safe: Set<Coord>, mines: Set<Coord>) {
-        var safe = Set<Coord>()
-        var mines = Set<Coord>()
-        var changed = true
-
-        while changed {
-            changed = false
-            for r in 0..<rows {
-                for c in 0..<cols {
-                    let coord = Coord(r: r, c: c)
-                    guard revealed.contains(coord) else { continue }
-
-                    let number = numbers[r][c]
-                    guard number > 0 else { continue }
-
-                    let neighbors = adjacent(r: r, c: c, rows: rows, cols: cols)
-                    let flaggedCount = neighbors.filter { flagged.contains($0) }.count
-                    let unknown = neighbors.filter { !revealed.contains($0) && !flagged.contains($0) }
-                    let minesNeeded = number - flaggedCount
-
-                    if minesNeeded == 0 {
-                        for unknownCoord in unknown where !safe.contains(unknownCoord) {
-                            safe.insert(unknownCoord)
-                            changed = true
-                        }
-                    } else if minesNeeded == unknown.count && minesNeeded > 0 {
-                        for unknownCoord in unknown where !mines.contains(unknownCoord) {
-                            mines.insert(unknownCoord)
-                            changed = true
+                var list = [Int]()
+                for dr in -1...1 {
+                    for dc in -1...1 where dr != 0 || dc != 0 {
+                        let nr = r + dr
+                        let nc = c + dc
+                        if nr >= 0 && nr < rows && nc >= 0 && nc < cols {
+                            list.append(nr * cols + nc)
                         }
                     }
                 }
+                neighbors[r * cols + c] = list
+            }
+        }
+        return neighbors
+    }
+
+    private static func computeNumbers(
+        mine: [Bool], neighbors: [[Int]], n: Int, number: inout [Int]
+    ) {
+        for i in 0..<n {
+            if mine[i] {
+                number[i] = 0
+                continue
+            }
+            var count = 0
+            for nb in neighbors[i] where mine[nb] { count += 1 }
+            number[i] = count
+        }
+    }
+
+    // MARK: - Solver
+
+    /// Returns true if the board is fully solvable starting from `start` using only
+    /// deterministic logic (no guessing), and the initial opening is large enough.
+    ///
+    /// Deduction is sound, so any cell it reveals is genuinely safe and any cell it
+    /// flags is genuinely a mine — the actual mine array is not needed here.
+    private static func solveAttempt(
+        number: [Int],
+        neighbors: [[Int]],
+        n: Int,
+        start: Int,
+        minOpening: Int,
+        safeTargetCount: Int
+    ) -> Bool {
+        var revealed = [Bool](repeating: false, count: n)
+        var flagged = [Bool](repeating: false, count: n)
+        var revealedCount = 0
+
+        // Work queue of revealed numbered cells whose neighborhood may have changed.
+        var queue = [Int]()
+        var inQueue = [Bool](repeating: false, count: n)
+
+        func enqueue(_ i: Int) {
+            if number[i] > 0 && !inQueue[i] {
+                inQueue[i] = true
+                queue.append(i)
             }
         }
 
-        return (safe, mines)
-    }
-
-    private static func adjacent(r: Int, c: Int, rows: Int, cols: Int) -> [Coord] {
-        var result = [Coord]()
-        for dr in -1...1 {
-            for dc in -1...1 where dr != 0 || dc != 0 {
-                let nr = r + dr
-                let nc = c + dc
-                if nr >= 0 && nr < rows && nc >= 0 && nc < cols {
-                    result.append(Coord(r: nr, c: nc))
+        // Reveal a safe cell, cascading through zero cells like a real opening.
+        func reveal(_ start: Int) {
+            if revealed[start] || flagged[start] { return }
+            var stack = [start]
+            while let cur = stack.popLast() {
+                if revealed[cur] { continue }
+                revealed[cur] = true
+                revealedCount += 1
+                if number[cur] == 0 {
+                    for nb in neighbors[cur] where !revealed[nb] && !flagged[nb] {
+                        stack.append(nb)
+                    }
+                } else {
+                    enqueue(cur)
+                }
+                for nb in neighbors[cur] where revealed[nb] && number[nb] > 0 {
+                    enqueue(nb)
                 }
             }
         }
-        return result
+
+        func flag(_ i: Int) {
+            if flagged[i] || revealed[i] { return }
+            flagged[i] = true
+            for nb in neighbors[i] where revealed[nb] && number[nb] > 0 {
+                enqueue(nb)
+            }
+        }
+
+        reveal(start)
+        if revealedCount < minOpening { return false }
+
+        while true {
+            // ---- Basic single-cell deduction, drained via the work queue ----
+            var qi = 0
+            while qi < queue.count {
+                let ci = queue[qi]
+                qi += 1
+                inQueue[ci] = false
+
+                var flaggedCount = 0
+                var unknown = [Int]()
+                for nb in neighbors[ci] {
+                    if flagged[nb] {
+                        flaggedCount += 1
+                    } else if !revealed[nb] {
+                        unknown.append(nb)
+                    }
+                }
+                if unknown.isEmpty { continue }
+
+                let need = number[ci] - flaggedCount
+                if need == 0 {
+                    for u in unknown { reveal(u) }
+                } else if need == unknown.count {
+                    for u in unknown { flag(u) }
+                }
+            }
+            queue.removeAll(keepingCapacity: true)
+
+            if revealedCount == safeTargetCount { return true }
+
+            // ---- Subset / constraint-subtraction deduction (basic stalled) ----
+            if subsetDeduction(
+                number: number,
+                neighbors: neighbors,
+                n: n,
+                revealed: revealed,
+                flagged: flagged,
+                reveal: reveal,
+                flag: flag
+            ) {
+                continue  // produced progress; re-run basic deduction
+            }
+
+            // No deduction possible: solvable only if everything safe is revealed.
+            return revealedCount == safeTargetCount
+        }
+    }
+
+    /// One pass of subset deduction over the active frontier constraints.
+    /// Returns true if it revealed or flagged at least one cell.
+    private static func subsetDeduction(
+        number: [Int],
+        neighbors: [[Int]],
+        n: Int,
+        revealed: [Bool],
+        flagged: [Bool],
+        reveal: (Int) -> Void,
+        flag: (Int) -> Void
+    ) -> Bool {
+        // Build active constraints: each revealed number with remaining unknown cells.
+        var cells = [[Int]]()  // sorted unknown-cell indices per constraint
+        var minesLeft = [Int]()
+        for i in 0..<n where revealed[i] && number[i] > 0 {
+            var flaggedCount = 0
+            var unknown = [Int]()
+            for nb in neighbors[i] {
+                if flagged[nb] {
+                    flaggedCount += 1
+                } else if !revealed[nb] {
+                    unknown.append(nb)
+                }
+            }
+            if unknown.isEmpty { continue }
+            cells.append(unknown.sorted())
+            minesLeft.append(number[i] - flaggedCount)
+        }
+
+        let count = cells.count
+        var progressed = false
+
+        for a in 0..<count {
+            for b in 0..<count where b != a {
+                // Require cells[a] ⊆ cells[b]; both arrays are sorted ascending.
+                if cells[a].count >= cells[b].count { continue }
+                guard let diff = subsetDifference(sub: cells[a], sup: cells[b]) else {
+                    continue
+                }
+                let dm = minesLeft[b] - minesLeft[a]
+                if dm == 0 {
+                    for cell in diff { reveal(cell) }
+                    progressed = true
+                } else if dm == diff.count {
+                    for cell in diff { flag(cell) }
+                    progressed = true
+                }
+            }
+            if progressed { break }  // re-derive constraints after any change
+        }
+
+        return progressed
+    }
+
+    /// If `sub` is a subset of `sup` (both sorted ascending), returns `sup \ sub`.
+    /// Returns nil if `sub` is not a subset.
+    private static func subsetDifference(sub: [Int], sup: [Int]) -> [Int]? {
+        var i = 0
+        var diff = [Int]()
+        for value in sup {
+            if i < sub.count && sub[i] == value {
+                i += 1
+            } else {
+                diff.append(value)
+            }
+        }
+        return i == sub.count ? diff : nil
     }
 }

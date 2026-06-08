@@ -56,7 +56,13 @@ class ViewController: NSViewController {
                 rows = noGuessDimensions[0]
                 cols = noGuessDimensions[1]
                 mines = noGuessDimensions[2]
+            } else if let dimensions = difficulties[difficulty] {
+                rows = dimensions[0]
+                cols = dimensions[1]
+                mines = dimensions[2]
             } else {
+                difficulty = "Beginner"
+                Defaults[.Game.difficulty] = difficulty
                 rows = difficulties[difficulty]![0]
                 cols = difficulties[difficulty]![1]
                 mines = difficulties[difficulty]![2]

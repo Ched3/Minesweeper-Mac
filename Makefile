@@ -12,7 +12,7 @@ XCODEBUILD = xcodebuild \
 	CODE_SIGN_IDENTITY="" \
 	CODE_SIGNING_REQUIRED=NO
 
-.PHONY: build run clean
+.PHONY: build run open clean
 
 build:
 	$(XCODEBUILD) build
@@ -27,6 +27,10 @@ run: build
 		done; \
 	fi
 	open "$(CURDIR)/$(APP)"
+
+# Open the latest Debug build in Finder (same app that make run launches)
+open:
+	open "$(CURDIR)/$(DERIVED_DATA)/Build/Products/$(CONFIG)"
 
 clean:
 	$(XCODEBUILD) clean
