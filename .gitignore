@@ -1,5 +1,6 @@
 # macOS
 **/.DS_Store
+build/
 
 # Xcode
 Minesweeper.xcodeproj/project.xcworkspace/xcuserdata
