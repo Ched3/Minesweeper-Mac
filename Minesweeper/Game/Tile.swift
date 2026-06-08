@@ -96,6 +96,66 @@ class Tile {
         self.setState(state: self.state)
     }
 
+    enum HintOverlayKind {
+        case safe
+        case mine
+        case probability(percent: Int, highlight: Bool)
+    }
+
+    func clearHintOverlay() {
+        node.childNode(withName: "hintOverlay")?.removeFromParent()
+    }
+
+    func showHintOverlay(kind: HintOverlayKind, scale: CGFloat) {
+        clearHintOverlay()
+
+        let size = node.size
+        let overlay = SKNode()
+        overlay.name = "hintOverlay"
+        overlay.zPosition = 10
+        overlay.isUserInteractionEnabled = false
+
+        switch kind {
+        case .safe:
+            let shape = SKShapeNode(rectOf: size)
+            shape.isUserInteractionEnabled = false
+            shape.fillColor = NSColor.systemGreen.withAlphaComponent(0.45)
+            shape.strokeColor = NSColor.systemGreen
+            shape.lineWidth = 1.5
+            shape.position = CGPoint(x: size.width / 2, y: -size.height / 2)
+            overlay.addChild(shape)
+        case .mine:
+            let shape = SKShapeNode(rectOf: size)
+            shape.isUserInteractionEnabled = false
+            shape.fillColor = NSColor.systemOrange.withAlphaComponent(0.45)
+            shape.strokeColor = NSColor.systemOrange
+            shape.lineWidth = 1.5
+            shape.position = CGPoint(x: size.width / 2, y: -size.height / 2)
+            overlay.addChild(shape)
+        case .probability(let percent, let highlight):
+            if highlight {
+                let shape = SKShapeNode(rectOf: size)
+                shape.isUserInteractionEnabled = false
+                shape.fillColor = NSColor.systemGreen.withAlphaComponent(0.35)
+                shape.strokeColor = NSColor.systemGreen
+                shape.lineWidth = 1.5
+                shape.position = CGPoint(x: size.width / 2, y: -size.height / 2)
+                overlay.addChild(shape)
+            }
+            let label = SKLabelNode(text: "\(percent)%")
+            label.isUserInteractionEnabled = false
+            label.fontName = "Helvetica-Bold"
+            label.fontSize = max(6, 8 * scale / 1.5)
+            label.fontColor = highlight ? .white : .black
+            label.verticalAlignmentMode = .center
+            label.horizontalAlignmentMode = .center
+            label.position = CGPoint(x: size.width / 2, y: -size.height / 2)
+            overlay.addChild(label)
+        }
+
+        node.addChild(overlay)
+    }
+
     func textureLookup(value: Value, theme: Theme) -> SKTexture {
         switch value {
         case .Mine:

@@ -42,6 +42,10 @@
 		3BF1A791285ED7CF00566000 /* BindingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF1A790285ED7CF00566000 /* BindingsViewController.swift */; };
 		3BF1A7CE2866AAD600566000 /* WindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF1A7CD2866AAD600566000 /* WindowController.swift */; };
 		3BF1D9B02BC0E5A70005200A /* Collections in Frameworks */ = {isa = PBXBuildFile; productRef = 3BF1D9AF2BC0E5A70005200A /* Collections */; };
+		3BC0A0012F00000100000001 /* BoardSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0112F00001100000001 /* BoardSnapshot.swift */; };
+		3BC0A0022F00000200000002 /* HintSolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0122F00001200000002 /* HintSolver.swift */; };
+		3BC0A0032F00000300000003 /* HintOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0132F00001300000003 /* HintOverlay.swift */; };
+		3BC0A0042F00000400000004 /* GameButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC0A0142F00001400000004 /* GameButton.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -80,6 +84,10 @@
 		3BF1A78C285ED7BE00566000 /* ThemesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemesViewController.swift; sourceTree = "<group>"; };
 		3BF1A790285ED7CF00566000 /* BindingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BindingsViewController.swift; sourceTree = "<group>"; };
 		3BF1A7CD2866AAD600566000 /* WindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowController.swift; sourceTree = "<group>"; };
+		3BC0A0112F00001100000001 /* BoardSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardSnapshot.swift; sourceTree = "<group>"; };
+		3BC0A0122F00001200000002 /* HintSolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintSolver.swift; sourceTree = "<group>"; };
+		3BC0A0132F00001300000003 /* HintOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HintOverlay.swift; sourceTree = "<group>"; };
+		3BC0A0142F00001400000004 /* GameButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameButton.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -152,7 +160,11 @@
 				3B5AB55227F970D30059BB0A /* Board.swift */,
 				3B5B1CB02E0729A600A84348 /* Borders.swift */,
 				3B5B08252E0A362F0067FAE5 /* MainButton.swift */,
+				3BC0A0142F00001400000004 /* GameButton.swift */,
 				3B5AB55427F974AE0059BB0A /* Tile.swift */,
+				3BC0A0112F00001100000001 /* BoardSnapshot.swift */,
+				3BC0A0122F00001200000002 /* HintSolver.swift */,
+				3BC0A0132F00001300000003 /* HintOverlay.swift */,
 				3B9DF114289DBBE1007CADA6 /* Number Displays */,
 			);
 			path = Game;
@@ -296,6 +308,10 @@
 				3B48305A2842C76F0060FCFD /* NumberDisplay.swift in Sources */,
 				3B5B08262E0A362F0067FAE5 /* MainButton.swift in Sources */,
 				3B88CEA628023695008C84E2 /* MineCounter.swift in Sources */,
+				3BC0A0012F00000100000001 /* BoardSnapshot.swift in Sources */,
+				3BC0A0022F00000200000002 /* HintSolver.swift in Sources */,
+				3BC0A0032F00000300000003 /* HintOverlay.swift in Sources */,
+				3BC0A0042F00000400000004 /* GameButton.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */

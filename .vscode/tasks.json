@@ -1,0 +1,22 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Minesweeper",
+      "type": "shell",
+      "command": "make build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Minesweeper",
+      "type": "shell",
+      "command": "make run",
+      "group": "none",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -35,6 +35,18 @@ class GameTimer: NumberDisplay {
         gameTimer.invalidate()
     }
 
+    func resume(from elapsed: TimeInterval) {
+        gameTimer.invalidate()
+        elapsedTime = elapsed
+        startTime = Date().addingTimeInterval(-elapsed)
+        gameTimer = Timer.scheduledTimer(
+            timeInterval: 0.01, target: self, selector: #selector(fire), userInfo: nil,
+            repeats: true)
+        RunLoop.current.add(gameTimer, forMode: .common)
+        self.set(value: Int(elapsedTime))
+        delegate?.updateTime(elapsedTime)
+    }
+
     func reset() {
         gameTimer.invalidate()
 

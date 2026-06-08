@@ -37,6 +37,8 @@ class Board {
     /// Whether this board is being loaded as a preview for the settings window
     private var isThemePreview: Bool
 
+    var hintScale: CGFloat { scale }
+
     private var tileSize: CGSize {
         CGSize(
             width: 16 * scale,
@@ -478,6 +480,85 @@ class Board {
         }
 
         return data
+    }
+
+    func captureSnapshot(elapsedTime: TimeInterval, mineCounter: Int) -> BoardSnapshot {
+        var cells = [[BoardSnapshot.Cell]]()
+        for r in 0..<rows {
+            var row = [BoardSnapshot.Cell]()
+            for c in 0..<cols {
+                let tile = tiles[r][c]
+                row.append(BoardSnapshot.Cell(state: tile.state, value: tile.value))
+            }
+            cells.append(row)
+        }
+        return BoardSnapshot(
+            cells: cells,
+            revealedTiles: revealedTiles,
+            mineCounter: mineCounter,
+            elapsedTime: elapsedTime
+        )
+    }
+
+    func restoreSnapshot(_ snapshot: BoardSnapshot) {
+        for r in 0..<rows {
+            for c in 0..<cols {
+                let cell = snapshot.cells[r][c]
+                let tile = tiles[r][c]
+                tile.clearHintOverlay()
+                tile.setValue(val: cell.value)
+                tile.setState(state: cell.state)
+            }
+        }
+        revealedTiles = snapshot.revealedTiles
+    }
+
+    func exportSolverGrid() -> [[SolverCell]] {
+        var grid = [[SolverCell]]()
+        for r in 0..<rows {
+            var row = [SolverCell]()
+            for c in 0..<cols {
+                let tile = tiles[r][c]
+                let revealedNumber: Int?
+                if tile.state == .Uncovered {
+                    revealedNumber = tileNumber(for: tile)
+                } else {
+                    revealedNumber = nil
+                }
+                row.append(
+                    SolverCell(
+                        isRevealed: tile.state == .Uncovered,
+                        isFlagged: tile.state == .Flagged,
+                        revealedNumber: revealedNumber
+                    ))
+            }
+            grid.append(row)
+        }
+        return grid
+    }
+
+    func flagCount() -> Int {
+        var count = 0
+        for r in 0..<rows {
+            for c in 0..<cols where tiles[r][c].state == .Flagged {
+                count += 1
+            }
+        }
+        return count
+    }
+
+    private func tileNumber(for tile: Tile) -> Int {
+        switch tile.value {
+        case .One: return 1
+        case .Two: return 2
+        case .Three: return 3
+        case .Four: return 4
+        case .Five: return 5
+        case .Six: return 6
+        case .Seven: return 7
+        case .Eight: return 8
+        default: return 0
+        }
     }
 
     /// Sets up a board to be used for previewing a theme in settings

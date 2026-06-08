@@ -13,14 +13,25 @@ extension GameScene {
 
     override func mouseDown(with event: NSEvent) {
         let clickedNode = self.nodes(at: event.location(in: scene!))
-        if let name = clickedNode[0].name {
+        guard !clickedNode.isEmpty else { return }
+
+        if let buttonName = buttonName(from: clickedNode) {
+            if buttonName == "Hint Button" {
+                hintButton.setPressed(true)
+            } else if buttonName == "Continue Button" {
+                continueButton.setPressed(true)
+            }
+            return
+        }
+
+        if let name = tileName(from: clickedNode) ?? clickedNode[0].name {
             if name == "Main Button" {
                 mainButton.set(state: .HappyPressed)
-            } else {
+            } else if isTileName(name) {
                 if gameState == .Won || gameState == .Lost { return }
                 mainButton.set(state: .Cautious)
 
-                currentTile = clickedNode[0].name
+                currentTile = name
 
                 let coords = convertLocation(name: name)
                 let tile = board.tileAt(r: coords[0], c: coords[1])!
@@ -43,6 +54,21 @@ extension GameScene {
     override func mouseUp(with event: NSEvent) {
         let clickedNode = self.nodes(at: event.location(in: scene!))
 
+        if !clickedNode.isEmpty, let buttonName = buttonName(from: clickedNode) {
+            if buttonName == "Hint Button" {
+                hintButton.setPressed(false)
+                if gameState == .Unstarted || gameState == .InProgress {
+                    showHint()
+                }
+            } else if buttonName == "Continue Button" {
+                continueButton.setPressed(false)
+                if gameState == .Lost {
+                    continueGame()
+                }
+            }
+            return
+        }
+
         if clickedNode.isEmpty {
             mainButton.set(state: .Happy)
             if isChord {
@@ -56,12 +82,14 @@ extension GameScene {
             return
         }
 
-        if let name = clickedNode[0].name {
+        if let name = tileName(from: clickedNode) ?? clickedNode[0].name {
             if name == "Main Button" {
                 mainButton.set(state: .Happy)
                 newGame()
-            } else {
+            } else if isTileName(name) {
                 if gameState == .Won || gameState == .Lost { return }
+
+                clearHintIfActive()
 
                 mainButton.set(state: .Happy)
                 let coords = convertLocation(name: name)
@@ -77,7 +105,12 @@ extension GameScene {
                     gameState = .InProgress
                 }
 
+                let snapshot = board.captureSnapshot(
+                    elapsedTime: gameTimer.elapsedTime,
+                    mineCounter: mineCounter.mines
+                )
                 if board.revealAt(r: coords[0], c: coords[1], isChord: isChord) {
+                    lastSnapshot = snapshot
                     finishGame(won: false)
                 } else if board.revealedTiles == rows * cols - mines {
                     finishGame(won: true)
@@ -99,9 +132,13 @@ extension GameScene {
     override func rightMouseDown(with event: NSEvent) {
         if gameState == .Won || gameState == .Lost { return }
         let clickedNode = self.nodes(at: event.location(in: scene!))
+        guard !clickedNode.isEmpty else { return }
 
-        if let name = clickedNode[0].name {
+        if buttonName(from: clickedNode) != nil { return }
+
+        if let name = tileName(from: clickedNode) ?? clickedNode[0].name {
             if name == "Main Button" { return }
+            guard isTileName(name) else { return }
 
             let coords = convertLocation(name: name)
             let tile = board.tileAt(r: coords[0], c: coords[1])!
@@ -126,6 +163,8 @@ extension GameScene {
                 board.setAt(r: coords[0], c: coords[1], state: .Covered)
             }
 
+            tile.clearHintOverlay()
+
             NotificationCenter.default.post(name: .updateStat, object: nil, userInfo: ["Effective": 0])
             NotificationCenter.default.post(name: .updateStat, object: nil, userInfo: ["Right": 0])
         }
@@ -137,19 +176,29 @@ extension GameScene {
             let clickedNode = self.nodes(at: event.location(in: scene!))
 
             // If still over a tile, perform the chord
-            if !clickedNode.isEmpty, let name = clickedNode[0].name, name != "Main Button" {
+            if let name = tileName(from: clickedNode) ?? clickedNode.first?.name,
+                isTileName(name)
+            {
                 if gameState == .Won || gameState == .Lost {
                     isChord = false
                     return
                 }
+
+                clearHintIfActive()
+
                 if gameState == .Unstarted {
                     gameTimer.start()
                     gameState = .InProgress
                 }
 
                 let coords = convertLocation(name: name)
+                let snapshot = board.captureSnapshot(
+                    elapsedTime: gameTimer.elapsedTime,
+                    mineCounter: mineCounter.mines
+                )
 
                 if board.revealAt(r: coords[0], c: coords[1], isChord: true) {
+                    lastSnapshot = snapshot
                     finishGame(won: false)
                 } else if board.revealedTiles == rows * cols - mines {
                     finishGame(won: true)
@@ -168,11 +217,12 @@ extension GameScene {
     override func mouseDragged(with event: NSEvent) {
         let clickedNode = self.nodes(at: event.location(in: scene!))
 
-        if clickedNode.count != 0, let name = clickedNode[0].name {
+        if let name = tileName(from: clickedNode) ?? clickedNode.first?.name {
             if name == "Main Button" { return }
             if gameState == .Won || gameState == .Lost { return }
+            guard isTileName(name) else { return }
 
-            if currentTile == clickedNode[0].name {
+            if currentTile == name {
                 let coords = convertLocation(name: name)
                 let tile = board.tileAt(r: coords[0], c: coords[1])
 
@@ -182,19 +232,60 @@ extension GameScene {
                 if isChord {
                     board.adjacentPressAt(r: tile!.r, c: tile!.c)
                 }
-            } else {
-                let coords = convertLocation(name: currentTile!)
+            } else if let currentTile {
+                let coords = convertLocation(name: currentTile)
                 let tile = board.tileAt(r: coords[0], c: coords[1])
 
-                if isChord {
-                    let coords = convertLocation(name: clickedNode[0].name!)
-                    board.adjacentRaiseAt(r: tile!.r, c: tile!.c, diffR: coords[0], diffC: coords[1])
+                if isChord, let dragName = tileName(from: clickedNode) ?? clickedNode.first?.name,
+                    isTileName(dragName)
+                {
+                    let dragCoords = convertLocation(name: dragName)
+                    board.adjacentRaiseAt(
+                        r: tile!.r, c: tile!.c, diffR: dragCoords[0], diffC: dragCoords[1])
                 } else {
                     tile?.raised()
                 }
-                currentTile = clickedNode[0].name
+                self.currentTile = name
             }
         }
+    }
+
+    private func clearHintIfActive() {
+        if hintActive {
+            clearHint()
+        }
+    }
+
+    private func buttonName(from nodes: [SKNode]) -> String? {
+        for node in nodes {
+            var current: SKNode? = node
+            while let n = current {
+                if n.name == "Hint Button" || n.name == "Continue Button" {
+                    return n.name
+                }
+                current = n.parent
+            }
+        }
+        return nil
+    }
+
+    private func tileName(from nodes: [SKNode]) -> String? {
+        for node in nodes {
+            var current: SKNode? = node
+            while let n = current {
+                if let name = n.name, isTileName(name) {
+                    return name
+                }
+                current = n.parent
+            }
+        }
+        return nil
+    }
+
+    private func isTileName(_ name: String) -> Bool {
+        let parts = name.split(separator: ",")
+        guard parts.count == 2 else { return false }
+        return parts[0].allSatisfy(\.isNumber) && parts[1].allSatisfy(\.isNumber)
     }
 
     private func isMiddleClick() -> Bool {

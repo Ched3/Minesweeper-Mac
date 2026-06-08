@@ -25,6 +25,8 @@ class GameScene: SKScene {
     var gameTimer: GameTimer
     var mineCounter: MineCounter
     var mainButton: MainButton
+    var hintButton: GameButton!
+    var continueButton: GameButton!
 
     var rows, cols, mines: Int
     var scale: CGFloat
@@ -33,6 +35,9 @@ class GameScene: SKScene {
 
     var currentTile: String? = nil
     var isChord = false
+    var lastSnapshot: BoardSnapshot?
+    var hintOverlay: HintOverlay!
+    var hintActive = false
 
     init(
         size: CGSize, scale: CGFloat, rows: Int, cols: Int, mines: Int, minesLayout: [(Int, Int)]?,
@@ -54,6 +59,13 @@ class GameScene: SKScene {
 
         super.init(size: size)
 
+        hintOverlay = HintOverlay(board: board)
+        hintButton = GameButton(
+            title: "Hint", name: "Hint Button", sceneSize: size, scale: scale)
+        continueButton = GameButton(
+            title: "Continue", name: "Continue Button", sceneSize: size, scale: scale)
+        continueButton.isHiddenButton = true
+
         NotificationCenter.default.addObserver(
             self, selector: #selector(self.restartGame(_:)), name: .restartGame, object: nil)
     }
@@ -71,6 +83,12 @@ class GameScene: SKScene {
         self.addChild(mainButton)
         self.addChild(mineCounter)
         self.addChild(gameTimer)
+        if !isThemePreview {
+            self.addChild(hintButton)
+            self.addChild(continueButton)
+            updateButtonsForGameState()
+            layoutHeaderButtons()
+        }
         self.addChild(board.node)
 
         if isThemePreview {
@@ -93,6 +111,16 @@ class GameScene: SKScene {
         board.updateTextures(to: theme)
         gameTimer.updateTextures(to: theme)
         mineCounter.updateTextures(to: theme)
+        if !isThemePreview {
+            hintButton.updateTextures(to: theme)
+            continueButton.updateTextures(to: theme)
+        }
+    }
+
+    func layoutHeaderButtons() {
+        guard !isThemePreview else { return }
+        hintButton.layoutNextTo(mainButton: mainButton, xOffset: 0)
+        continueButton.layoutNextTo(mainButton: mainButton, xOffset: 0)
     }
 
     /// Force update the size of all nodes. Called when the scale setting is changed, or the Zoom button is pressed
@@ -107,6 +135,64 @@ class GameScene: SKScene {
         board.updateScale(scale: scale)
         gameTimer.updateScale(sceneSize: size, scale: scale)
         mineCounter.updateScale(sceneSize: size, scale: scale)
+        if !isThemePreview {
+            hintButton.updateScale(sceneSize: size, scale: scale)
+            continueButton.updateScale(sceneSize: size, scale: scale)
+            layoutHeaderButtons()
+        }
+        clearHint()
+    }
+
+    func clearHint() {
+        hintActive = false
+        hintOverlay.clear()
+    }
+
+    func showHint() {
+        clearHint()
+        let grid = board.exportSolverGrid()
+        let result = HintSolver.solve(
+            grid: grid,
+            rows: rows,
+            cols: cols,
+            totalMines: mines,
+            flagCount: board.flagCount()
+        )
+        switch result {
+        case .deterministic(let safe, let mineTiles):
+            hintOverlay.showDeterministic(safe: safe, mines: mineTiles)
+        case .probabilities(let probs):
+            hintOverlay.showProbabilities(probs)
+        }
+        hintActive = true
+    }
+
+    func continueGame() {
+        guard let snapshot = lastSnapshot else { return }
+        board.restoreSnapshot(snapshot)
+        mineCounter.mines = snapshot.mineCounter
+        mineCounter.set(value: snapshot.mineCounter)
+        gameState = .InProgress
+        mainButton.set(state: .Happy)
+        continueButton.isHiddenButton = true
+        hintButton.isHiddenButton = false
+        gameTimer.resume(from: snapshot.elapsedTime)
+        lastSnapshot = nil
+    }
+
+    private func updateButtonsForGameState() {
+        guard !isThemePreview else { return }
+        switch gameState {
+        case .Unstarted, .InProgress:
+            hintButton.isHiddenButton = false
+            continueButton.isHiddenButton = true
+        case .Lost:
+            hintButton.isHiddenButton = true
+            continueButton.isHiddenButton = lastSnapshot == nil
+        case .Won:
+            hintButton.isHiddenButton = true
+            continueButton.isHiddenButton = true
+        }
     }
 
     /// Handle game ending logic for the board, main button, and stats
@@ -118,13 +204,17 @@ class GameScene: SKScene {
             gameState = .Won
             board.flagMines()
             mainButton.set(state: .Cool)
+            lastSnapshot = nil
+            clearHint()
 
             updateBestTimes()
         } else {
             gameState = .Lost
             board.lostGame()
             mainButton.set(state: .Dead)
+            clearHint()
         }
+        updateButtonsForGameState()
         gameTimer.stop()
     }
 
@@ -164,11 +254,15 @@ class GameScene: SKScene {
     /// - Parameter restart: Whether the previous board is being replayed
     func newGame(restart: Bool = false) {
         gameState = .Unstarted
+        lastSnapshot = nil
+        clearHint()
         NotificationCenter.default.post(name: .resetStats, object: nil)
 
         board.reset(restart: restart)
         gameTimer.reset()
         mineCounter.reset(mines: mines)
+        mainButton.set(state: .Happy)
+        updateButtonsForGameState()
     }
 
     /// Called when the previous board should be replayed
